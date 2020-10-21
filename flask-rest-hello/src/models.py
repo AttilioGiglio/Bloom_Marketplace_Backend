@@ -4,11 +4,9 @@ db = SQLAlchemy()
 
 class Client(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(80), unique=False, nullable=False)
-    role = db.Column(db.Boolean(), nullable=False.)
-    is_active = db.Column(db.Boolean(), unique=False, nullable=False)
+    name = db.Column(db.String(150), nullable=False)
+    email = db.Column(db.String(150), unique=True, nullable=False)
+    password = db.Column(db.String(250), unique=False, nullable=False)
 
     def __repr__(self):
         return '<User %r>' % self.username
@@ -17,7 +15,7 @@ class Client(db.Model):
         return {
             "id": self.id,
             "name": self.name,
-            "email": self.email,
+            "email": self.email
             # do not serialize the password, its a security breach
         }
     
@@ -26,40 +24,60 @@ class Client(db.Model):
 
 class Supplier(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(100), unique=True, nullable=False)
+    name = db.Column(db.String(150), nullable=False)
+    email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(250), unique=False, nullable=False)
-    cellphone = db.Column(db.Integer, unique=True, nullable=False)
-    role = db.Column(db.Boolean(), nullable=False.)
-    is_active = db.Column(db.Boolean(), unique=False, nullable=False)
+
+    address_business = db.relationship('Address_business', backref='supplier', uselist=False)
+    billing_card_business = db.relationship('Billing_card_business', backref='supplier', uselist=False)
+    billing_info_business = db.relationship('Billing_info_business', backref='supplier', uselist=False)
+    product = db.relationship('Product', backref='supplier')
 
     def serialize(self):
         return{
             "id": self.id,
             "name": self.name,
-            "email": self.email,
-            "cellphone": self.cellphone
+            "email": self.email
         }
     
     def _generateId(self):
         return randint(0, 99999999)
 
-
-class Billing_details(db.Model):
+class Billing_info_business(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    cardNumber = db.Column(db.Integer, nullable=False)
-    cvv = db.Column(db.Integer, nullable=False)
-    month = db.Column(db.String(50), nullable=False)
-    year = db.Column(db.Integer, nullable=False)
-    #user_email = db.Column(db.String(255), db.ForeignKey('user.email'), nullable=True)
+    business_legal_name = db.Column(db.String(150), nullable=False)
+    business_id = db.Column(db.Integer, nullable=False)
+
+    supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'),  nullable=False)
 
     def serialize(self):
         return{
             "id": self.id,
-            "cardNumber": self.cardNumber,
+            "business_legal_name": self.business_legal_name,
+            "business_id": self.business_id
+        }
+    
+    def _generateId(self):
+        return randint(0, 99999999)
+
+class Billing_card_business(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    card_name = db.Column(db.String(150), nullable=False)
+    card_number = db.Column(db.Integer, nullable=False)
+    cvv = db.Column(db.Integer, nullable=False)
+    month = db.Column(db.String(50), nullable=False)
+    year = db.Column(db.Integer, nullable=False)
+
+    supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'),  nullable=False)
+
+    def serialize(self):
+        return{
+            "id": self.id,
+            "card_name": 
+            "card_number": self.cardNumber,
             "cvv": self.cvv,
             "month": self.month,
-            "year":self.year,
+            "year":self.year
          
         }
     
@@ -67,62 +85,89 @@ class Billing_details(db.Model):
         return randint(0, 99999999)
 
 
-class Billing_details(db.Model):
+class Address_business(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    cardNumber = db.Column(db.Integer, nullable=False)
-    cvv = db.Column(db.Integer, nullable=False)
-    month = db.Column(db.String(50), nullable=False)
-    year = db.Column(db.Integer, nullable=False)
-    #user_email = db.Column(db.String(255), db.ForeignKey('user.email'), nullable=True)
+    address = db.Column(db.Integer, unique=True, nullable=False)
+    comuna = db.Column(db.Integer, nullable=False)
+    region = db.Column(db.String(50), nullable=False)
+
+    supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'),  nullable=False)
 
     def serialize(self):
         return{
             "id": self.id,
-            "cardNumber": self.cardNumber,
-            "cvv": self.cvv,
-            "month": self.month,
-            "year":self.year,
-         
+            "address": self.name_address,
+            "comuna": self.comuna,
+            "region": self.region
         }
     
     def _generateId(self):
         return randint(0, 99999999)
 
 
-class Order(db.Model):
+class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    client_name = db.Column(db.String(50), nullable=False) #se agrega ya que está en el formulario de "create order".
-    streetAddress = db.Column(db.String(50), nullable=False)
-    commune = db.Column(db.String(50), nullable=False)
-    city = db.Column(db.String(50), nullable=False)
-    invoice_id = db.Column(db.Integer, nullable=False)
-    office_id = db.Column(db.Integer, nullable=False)
-    products = db.Column(db.String(50), nullable=False)
-    courrier = db.Column(db.String(50), nullable=False) #se agrega courrier.
-    client_email = db.Column(db.String(50), nullable=False)
-    cellphone = db.Column(db.Integer, nullable=False)
-    confirmed = db.Column(db.Boolean, nullable=False)
-    #user_email = db.Column(db.String(255), db.ForeignKey('user.email'), nullable=True)
+    sku_id = db.Column(db.Integer, unique=True, nullable=False )
+    name = db.Column(db.String(150), nullable=False)
+    description = db.Column(db.Text(), length=None, nullable=False)
+    quantity = db.Column(db.Integer, nullable=False )
+    price = db.Column(db.Integer, nullable=False )
+    img = db.Column(db.LargeBinary, nullable=False )
+    date = db.Column(db.DateTime, nullable=False)
+    
+    supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False)
 
     def serialize(self):
         return{
-            "id": self.id,
-            "client_name": self.client_name,
-            "streetAddress": self.streetAddress,
-            "commune": self.commune,
-            "city": self.city,
-            "invoice_id": self.invoice_id,
-            "office_id": self.office_id,
-            "products": self.products,
-            "courrier": self.courrier,
-            "client_email": self.client_email,
-            "cellphone": self.cellphone,
-            "confirmed": self.confirmed,
-            #"user_email": self.user_email,
+            "id" = self.id 
+            "sku_id" = self.sku_id
+            "name" = self.name
+            "description" = self.description
+            "quantity" = self.quantity
+            "price" = self.price
+            "img" = self.img
+            "date" = self.date
         }
     
     def _generateId(self): 
         return randint(0, 99999999)
 
 
+class Product_Order(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
 
+    
+    supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False)
+
+    def serialize(self):
+        return{
+
+        }
+    
+    def _generateId(self): 
+        return randint(0, 99999999)
+
+class Order(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    order_number = db.Column(db.Integer, unique=True, nullable=False )
+    payment_id = db.Column(db.Text(), length=None, nullable=False)
+    total = db.Column(db.Integer, nullable=False )
+    date = db.Column(db.String(150), nullable=False)
+    status = db.Column(db.Integer, nullable=False )
+    sale_tax = db.Column(db.Integer, nullable=False )
+    
+    client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
+
+    def serialize(self):
+        return{
+            "id" = self.id 
+            "order_number" = self.order_number
+            "payment_id" = self.payment_id
+            "total" = self.total
+            "date" = self.date
+            "status" = self.status
+            "sale_tax" = self.sale_tax
+        }
+    
+    def _generateId(self): 
+        return randint(0, 99999999)
