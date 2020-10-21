@@ -7,6 +7,7 @@ class Client(db.Model):
     name = db.Column(db.String(150), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(250), unique=False, nullable=False)
+    role = db.Column(db.String(150), nullable=False)
 
     def __repr__(self):
         return '<User %r>' % self.username
@@ -27,6 +28,7 @@ class Supplier(db.Model):
     name = db.Column(db.String(150), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(250), unique=False, nullable=False)
+    role = db.Column(db.String(150), nullable=False)
 
     address_business = db.relationship('Address_business', backref='supplier', uselist=False)
     billing_card_business = db.relationship('Billing_card_business', backref='supplier', uselist=False)
@@ -109,13 +111,14 @@ class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sku_id = db.Column(db.Integer, unique=True, nullable=False )
     name = db.Column(db.String(150), nullable=False)
-    description = db.Column(db.Text(), length=None, nullable=False)
+    description = db.Column(db.Text, length=None, nullable=False)
     quantity = db.Column(db.Integer, nullable=False )
     price = db.Column(db.Integer, nullable=False )
     img = db.Column(db.LargeBinary, nullable=False )
     date = db.Column(db.DateTime, nullable=False)
     
     supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False)
+    orders = db.relationship("Order", secondary=product_order, back_populates="order")
 
     def serialize(self):
         return{
@@ -127,25 +130,18 @@ class Product(db.Model):
             "price" = self.price
             "img" = self.img
             "date" = self.date
+            "orders" = list(map(lambda x: x.serialize(), self.orders))
         }
     
     def _generateId(self): 
         return randint(0, 99999999)
 
 
-class Product_Order(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+product_order = db.Table('product_order',
+    db.Column("product_id", db.Integer, db.ForeignKey("sister.id")),
+    db.Column("order_id", db.Integer, db.ForeignKey("brother.id"))
+)
 
-    
-    supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False)
-
-    def serialize(self):
-        return{
-
-        }
-    
-    def _generateId(self): 
-        return randint(0, 99999999)
 
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -157,6 +153,7 @@ class Order(db.Model):
     sale_tax = db.Column(db.Integer, nullable=False )
     
     client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
+    products = db.relationship('Product', secondary=product_order, back_populates="product")
 
     def serialize(self):
         return{
@@ -167,6 +164,7 @@ class Order(db.Model):
             "date" = self.date
             "status" = self.status
             "sale_tax" = self.sale_tax
+            "products" = list(map(lambda x: x.serialize(), self.products))
         }
     
     def _generateId(self): 
