@@ -3,6 +3,7 @@
 1. Log in to mysql terminal:
 ```sh
 $ mysql
+mysql -u root -p
 ```
 2. Once inside, check if you have the database already created:
 ```sql
