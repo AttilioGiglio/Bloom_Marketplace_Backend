@@ -3,6 +3,8 @@ This module takes care of starting the API Server, Loading the DB and Adding the
 """
 import os
 import json
+import bcrypt
+import re
 from flask import Flask, request, jsonify, url_for
 from flask_migrate import Migrate
 from flask_swagger import swagger
@@ -10,6 +12,10 @@ from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
 from models import db, Client, Supplier, Information, Product, Order
+from flask_jwt_extended import (
+    JWTManager, jwt_required, create_access_token,
+    get_jwt_identity
+)
 
 app = Flask(__name__)
 
@@ -22,7 +28,9 @@ MIGRATE = Migrate(app, db)
 db.init_app(app)
 CORS(app)
 setup_admin(app)
-
+app.config['JWT_SECRET_KEY'] = 'fuckyou!!Youcan/tstolemy1password!bitch'
+jwt = JWTManager(app)
+bcrypt = Bcrypt(app)
 # configure_uploads(app, photos)
 # app.config['UPLOAD_PHOTOS_DEST'] = '/pictures'
 
@@ -41,18 +49,21 @@ def sitemap():
 def signupClient():
     if request.method == "POST":
         new_client = json.loads(request.data)
+        password = request.json.get('password', None)
+        hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
         client = Client(
             name=new_client["name"], 
             email=new_client["email"], 
-            password=new_client["password"],
+            password=hashed,
             role=new_client["role"]
         )
 
         db.session.add(client)
         db.session.commit()
-        return jsonify({"exitoso": True}), 200
-
+        access_token = create_access_token(identity={"email":email})
+        return {"access_token":True}, 200
+    
     if request.method == "GET":
         client_signup = Client.query.all()
 
@@ -193,23 +204,30 @@ def getAllProduct():
     all_products = list(map(lambda product: product.serialize(), products))
     return jsonify(all_products)
 
-@app.route('/checkout_step_one/<id>', methods=['PUT', 'DELETE'])
-def updateShoppingCart(id):
-    if request.method == "PUT":
-        if id is not None:
-            product = Product.query.get(id)
-            return jsonify(product.serialize()), 200
-    
-    if request.method == "PUT":
-        if id is not None:
-            product = Product.query.get(id)
-            return jsonify(product.serialize()), 200
-    
+@app.route('/checkout_step_one/<id>', methods=['POST'])
+def postShoppingCart():
+
+    new_order = json.loads(request.data)
+    productlist = list(map(lambda product: Product.query.get(suppplier_id=product), id))
+
+
+    order = Order(
+            total= new_order["total"],
+            status= new_order["status"],
+            sale_tax= new_order["sale_tax"],
+            client_id=new_order["client_id"],
+            products = list(map(lambda item: item, productlist))
+        )
+  
+    db.session.add(order)
+    db.session.commit()
     return jsonify({"exitoso": True}), 200
 
-@app.route('/orders_list_business', methods=['GET'])
+@app.route('/orders_list_business/<id>', methods=['GET'])
 def updateOrders():
-    
+    order = Order.query.filter_by(client_id=id)
+    client = Client.query.get(id)
+
     return jsonify({"exitoso": True}), 200
 
 # this only runs if `$ python src/main.py` is executed
