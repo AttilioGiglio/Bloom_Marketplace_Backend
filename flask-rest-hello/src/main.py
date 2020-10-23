@@ -186,19 +186,24 @@ def postProduct():
     db.session.commit()
     return jsonify({"exitoso": True}), 200
 
-@app.route('/checkout_step_one/<id>', methods=['GET', 'DELETE'])
+
+@app.route('/product_cards', methods=['GET'])
+def getAllProduct():
+    products = Product.query.all()
+    all_products = list(map(lambda product: product.serialize(), products))
+    return jsonify(all_products)
+
+@app.route('/checkout_step_one/<id>', methods=['PUT', 'DELETE'])
 def updateShoppingCart(id):
-    if request.method == "GET":
+    if request.method == "PUT":
         if id is not None:
             product = Product.query.get(id)
             return jsonify(product.serialize()), 200
-
-    if request.method == "DELETE":
-        if id is not None: 
+    
+    if request.method == "PUT":
+        if id is not None:
             product = Product.query.get(id)
-            db.session.delete(product)
-            db.session.commit()
-            return "se elimino producto del carrito de compra", 200
+            return jsonify(product.serialize()), 200
     
     return jsonify({"exitoso": True}), 200
 
