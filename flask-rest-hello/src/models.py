@@ -16,10 +16,10 @@ class Client(db.Model):
 
     def serialize(self):
         return {
-            # "id": self.id,
+            "id": self.id,
             "name": self.name,
             "email": self.email,
-            # "order": list(map(lambda x: x.serialize(), self.order))
+            "order": list(map(lambda x: x.serialize(), self.order))
             # do not serialize the password, its a security breach
         }
     
@@ -30,9 +30,6 @@ class Client(db.Model):
             "email": self.email,
             "order": list(map(lambda x: x.serialize(), self.order))
         }
-        
-    # def _generateId(self):
-    #     return randint(0, 99999999)
 
 class Supplier(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -41,9 +38,7 @@ class Supplier(db.Model):
     password = db.Column(db.String(250), unique=False, nullable=False)
     role = db.Column(db.String(150), nullable=False)
 
-    addressbusiness = db.relationship('AddressBusiness', backref='supplier', uselist=False)
-    billingcardbusiness = db.relationship('BillingCardBusiness', backref='supplier', uselist=False)
-    billinginfobusiness = db.relationship('BillingInfoBusiness', backref='supplier', uselist=False)
+    information = db.relationship('Information', backref='supplier', uselist=False)
     product = db.relationship('Product', backref='supplier', lazy=True) #uselist=False
 
     def serialize(self):
@@ -52,51 +47,21 @@ class Supplier(db.Model):
             "name": self.name,
             "email": self.email,
             "role": self.role,
-            # "address_business": list(map(lambda x: x.serialize(), self.address_business)),
-            # "billing_card_business": list(map(lambda x: x.serialize(), self.billing_card_business)),
-            # "billing_info_business": list(map(lambda x: x.serialize(), self.billing_info_business)),
-            # "product": list(map(lambda x: x.serialize(), self.product))
+            "information": list(map(lambda x: x.serialize(), self.information)),
+            "product": list(map(lambda x: x.serialize(), self.product))
             # do not serialize the password, its a security breach
         }
 
-class BillingInfoBusiness(db.Model):
+class Information(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     business_legal_name = db.Column(db.String(150), nullable=False)
     business_id = db.Column(db.Integer, nullable=False)
-
-    supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'),  nullable=False)
-
-    def serialize(self):
-        return{
-            "id": self.id,
-            "business_legal_name": self.business_legal_name,
-            "business_id": self.business_id
-        }
-
-class BillingCardBusiness(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
     card_name = db.Column(db.String(150), nullable=False)
     card_number = db.Column(db.Integer, nullable=False)
     cvv = db.Column(db.Integer, nullable=False)
     month = db.Column(db.String(50), nullable=False)
     year = db.Column(db.Integer, nullable=False)
-
-    supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'),  nullable=False)
-
-    def serialize(self):
-        return{
-            "id": self.id,
-            "card_name": self.card_name,
-            "card_number": self.cardNumber,
-            "cvv": self.cvv,
-            "month": self.month,
-            "year":self.year
-         
-        }
-
-class AddressBusiness(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    address = db.Column(db.String(200), unique=True, nullable=False)
+    address = db.Column(db.String(200), nullable=False)
     comuna = db.Column(db.String(100), nullable=False)
     region = db.Column(db.String(100), nullable=False)
 
@@ -105,9 +70,16 @@ class AddressBusiness(db.Model):
     def serialize(self):
         return{
             "id": self.id,
-            "address": self.name_address,
+            "business_legal_name": self.business_legal_name,
+            "card_name": self.card_name,
+            "card_number": self.card_number,
+            "cvv": self.cvv,
+            "month": self.month,
+            "year":self.year,
+            "address": self.address,
             "comuna": self.comuna,
-            "region": self.region
+            "region": self.region,
+            "suppplier_id": self.supplier_id,
         }
         
 productorder = db.Table('productorder',
@@ -138,6 +110,7 @@ class Product(db.Model):
             "price": self.price,
             "img": self.img,
             "date": self.date,
+            "suppplier_id": self.supplier_id,
             "orders": list(map(lambda x: x.serialize(), self.orders))
         }
 

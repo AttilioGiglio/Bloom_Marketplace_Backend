@@ -25,6 +25,7 @@ mysql -u root -e "CREATE DATABASE example";
 pipenv run init;
 pipenv run migrate;
 pipenv run upgrade;
+control+shift+f
 ```
 
 ## How to Start coding?

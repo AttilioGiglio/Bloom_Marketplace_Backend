@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 1f7af8c891cb
+Revision ID: b450b1e9e421
 Revises: 
-Create Date: 2020-10-22 15:45:15.189111
+Create Date: 2020-10-22 18:14:47.573995
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '1f7af8c891cb'
+revision = 'b450b1e9e421'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -36,31 +36,18 @@ def upgrade():
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email')
     )
-    op.create_table('address_business',
+    op.create_table('information',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('address', sa.String(length=200), nullable=False),
-    sa.Column('comuna', sa.String(length=100), nullable=False),
-    sa.Column('region', sa.String(length=100), nullable=False),
-    sa.Column('supplier_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['supplier_id'], ['supplier.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('address')
-    )
-    op.create_table('billing_card_business',
-    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('business_legal_name', sa.String(length=150), nullable=False),
+    sa.Column('business_id', sa.Integer(), nullable=False),
     sa.Column('card_name', sa.String(length=150), nullable=False),
     sa.Column('card_number', sa.Integer(), nullable=False),
     sa.Column('cvv', sa.Integer(), nullable=False),
     sa.Column('month', sa.String(length=50), nullable=False),
     sa.Column('year', sa.Integer(), nullable=False),
-    sa.Column('supplier_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['supplier_id'], ['supplier.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_table('billing_info_business',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('business_legal_name', sa.String(length=150), nullable=False),
-    sa.Column('business_id', sa.Integer(), nullable=False),
+    sa.Column('address', sa.String(length=200), nullable=False),
+    sa.Column('comuna', sa.String(length=100), nullable=False),
+    sa.Column('region', sa.String(length=100), nullable=False),
     sa.Column('supplier_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['supplier_id'], ['supplier.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -107,9 +94,7 @@ def downgrade():
     op.drop_table('productorder')
     op.drop_table('product')
     op.drop_table('order')
-    op.drop_table('billing_info_business')
-    op.drop_table('billing_card_business')
-    op.drop_table('address_business')
+    op.drop_table('information')
     op.drop_table('supplier')
     op.drop_table('client')
     # ### end Alembic commands ###
