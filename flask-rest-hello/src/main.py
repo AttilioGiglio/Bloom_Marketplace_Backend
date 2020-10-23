@@ -10,10 +10,11 @@ from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
 from models import db, Client, Supplier, Information, Product, Order
-from datetime import datetime
-from flask_uploads import UploadSet, configure_upload, IMAGES
 
 app = Flask(__name__)
+
+# photos = UploadSet('photos', IMAGES)
+# app.config['UPLOADED_PHOTOS_DEST'] = 'images'
 app.url_map.strict_slashes = False
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DB_CONNECTION_STRING')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -22,8 +23,8 @@ db.init_app(app)
 CORS(app)
 setup_admin(app)
 
-photos = UploadsSet('PHOTOS', IMAGES)
-app.config['UPLOAD_PHOTOS_DEST'] = '/pictures'
+# configure_uploads(app, photos)
+# app.config['UPLOAD_PHOTOS_DEST'] = '/pictures'
 
 # Handle/serialize errors like a JSON object
 @app.errorhandler(APIException)
@@ -65,13 +66,14 @@ def loginClient():
 
     email = request.json.get('email', None)
     password = request.json.get('password', None)
+    role = request.json.get('role', None)
 
     if not email:
         return jsonify({"msg": "No existe email"}), 400
     if not password:
         return jsonify({"msg": "No existe clave"}), 400
 
-    user = Client.query.filter_by(email=email).first()
+    user = Client.query.filter_by(email=email, role="client").first()
 
     if user is None:
         return jsonify({"msg": "No existe usuario con ese correo"}), 404
@@ -106,13 +108,14 @@ def loginSupplier():
 
     email = request.json.get('email', None)
     password = request.json.get('password', None)
+    role = request.json.get('role', None)
 
     if not email:
         return jsonify({"msg": "No existe email"}), 400
     if not password:
         return jsonify({"msg": "No existe clave"}), 400
 
-    user = Supplier.query.filter_by(email=email).first()
+    user = Supplier.query.filter_by(email=email, role="business").first()
 
     if user is None:
         return jsonify({"msg": "No existe usuario con ese correo"}), 404
@@ -174,9 +177,8 @@ def postProduct():
             name=new_product["name"], 
             description=new_product["description"],
             quantity=new_product["quantity"],
-            img=new_product["img"],
+            # img=new_product["img"],
             price=new_product["price"],
-            date=datetime.now(),
             supplier_id=new_product["supplier_id"]
         )
   
@@ -184,6 +186,26 @@ def postProduct():
     db.session.commit()
     return jsonify({"exitoso": True}), 200
 
+@app.route('/checkout_step_one/<id>', methods=['GET', 'DELETE'])
+def updateShoppingCart(id):
+    if request.method == "GET":
+        if id is not None:
+            product = Product.query.get(id)
+            return jsonify(product.serialize()), 200
+
+    if request.method == "DELETE":
+        if id is not None: 
+            product = Product.query.get(id)
+            db.session.delete(product)
+            db.session.commit()
+            return "se elimino producto del carrito de compra", 200
+    
+    return jsonify({"exitoso": True}), 200
+
+@app.route('/orders_list_business', methods=['GET'])
+def updateOrders():
+    
+    return jsonify({"exitoso": True}), 200
 
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':

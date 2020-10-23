@@ -1,15 +1,16 @@
 from flask_sqlalchemy import SQLAlchemy
+import datetime
 
 db = SQLAlchemy()
 
 class Client(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(150), nullable=False)
-    email = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.String(250), unique=False, nullable=False)
-    role = db.Column(db.String(150), nullable=False)
+    name = db.Column(db.String(150))
+    email = db.Column(db.String(150), unique=True)
+    password = db.Column(db.String(250))
+    role = db.Column(db.String(150))
 
-    order = db.relationship('Order', backref='client', lazy=True) #uselist=False
+    order = db.relationship('Order', backref='client', lazy=True, uselist=False)
 
     def __repr__(self):
         return '<User %r>' % self.username
@@ -19,7 +20,7 @@ class Client(db.Model):
             "id": self.id,
             "name": self.name,
             "email": self.email,
-            "order": list(map(lambda x: x.serialize(), self.order))
+            # "order": list(map(lambda x: x.serialize(), self.order))
             # do not serialize the password, its a security breach
         }
     
@@ -33,10 +34,10 @@ class Client(db.Model):
 
 class Supplier(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(150), nullable=False)
-    email = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.String(250), unique=False, nullable=False)
-    role = db.Column(db.String(150), nullable=False)
+    name = db.Column(db.String(150))
+    email = db.Column(db.String(150), unique=True)
+    password = db.Column(db.String(250))
+    role = db.Column(db.String(150))
 
     information = db.relationship('Information', backref='supplier', uselist=False)
     product = db.relationship('Product', backref='supplier', lazy=True) #uselist=False
@@ -47,23 +48,23 @@ class Supplier(db.Model):
             "name": self.name,
             "email": self.email,
             "role": self.role,
-            "information": list(map(lambda x: x.serialize(), self.information)),
-            "product": list(map(lambda x: x.serialize(), self.product))
+            # "information": list(map(lambda x: x.serialize(), self.information)),
+            # "product": list(map(lambda x: x.serialize(), self.product))
             # do not serialize the password, its a security breach
         }
 
 class Information(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    business_legal_name = db.Column(db.String(150), nullable=False)
-    business_id = db.Column(db.Integer, nullable=False)
-    card_name = db.Column(db.String(150), nullable=False)
-    card_number = db.Column(db.Integer, nullable=False)
-    cvv = db.Column(db.Integer, nullable=False)
-    month = db.Column(db.String(50), nullable=False)
-    year = db.Column(db.Integer, nullable=False)
-    address = db.Column(db.String(200), nullable=False)
-    comuna = db.Column(db.String(100), nullable=False)
-    region = db.Column(db.String(100), nullable=False)
+    business_legal_name = db.Column(db.String(150), unique=True)
+    business_id = db.Column(db.Integer, unique=True)
+    card_name = db.Column(db.String(150))
+    card_number = db.Column(db.Integer)
+    cvv = db.Column(db.Integer)
+    month = db.Column(db.String(50))
+    year = db.Column(db.Integer)
+    address = db.Column(db.String(200))
+    comuna = db.Column(db.String(100))
+    region = db.Column(db.String(100))
 
     supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'),  nullable=False)
 
@@ -89,13 +90,13 @@ productorder = db.Table('productorder',
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    sku_id = db.Column(db.Integer, unique=True, nullable=False )
-    name = db.Column(db.String(150), nullable=False)
-    description = db.Column(db.Text, nullable=False)
-    quantity = db.Column(db.Integer, nullable=False )
-    price = db.Column(db.Integer, nullable=False )
-    img = db.Column(db.LargeBinary, nullable=False )
-    date = db.Column(db.DateTime, nullable=False)
+    sku_id = db.Column(db.Integer)
+    name = db.Column(db.String(150))
+    description = db.Column(db.Text)
+    quantity = db.Column(db.Integer)
+    price = db.Column(db.Integer)
+    img = db.Column(db.String(600))
+    date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     
     supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False)
     orders = db.relationship("Order", secondary=productorder, lazy=True)
@@ -109,19 +110,18 @@ class Product(db.Model):
             "quantity": self.quantity,
             "price": self.price,
             "img": self.img,
-            "date": self.date,
             "suppplier_id": self.supplier_id,
             "orders": list(map(lambda x: x.serialize(), self.orders))
         }
 
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    order_number = db.Column(db.Integer, unique=True, nullable=False )
-    payment_id = db.Column(db.Text, nullable=False)
-    total = db.Column(db.Integer, nullable=False )
-    status = db.Column(db.Boolean, nullable=False )
-    sale_tax = db.Column(db.Integer, nullable=False )
-    date = db.Column(db.DateTime, nullable=False)
+    order_number = db.Column(db.Integer, unique=True)
+    payment_id = db.Column(db.Text)
+    total = db.Column(db.Integer)
+    status = db.Column(db.Boolean)
+    sale_tax = db.Column(db.Integer)
+    date = db.Column(db.DateTime)
     
     client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
     products = db.relationship('Product', secondary=productorder, lazy=True)
