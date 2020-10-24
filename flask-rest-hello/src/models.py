@@ -76,10 +76,24 @@ class Information(db.Model):
             "region": self.region,
             "suppplier_id": self.supplier_id,
         }
-        
+
+# class Inventory(db.Model):
+#     id = db.Column(db.Integer, primary_key=True)
+#     supplier_stock_per_product = db.Column(db.Integer)
+#     total_supplier_stock = db.Column(db.Integer)
+
+#     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+
+#      def serialize(self):
+#         return{
+#             "supplier_stock_per_product": self.supplier_stock_per_product,
+#             "total_supplier_stock": self.total_supplier_stock,
+#             "product_id": self.product_id       
+
 productorder = db.Table('productorder',
     db.Column("product_id", db.Integer, db.ForeignKey("product.id"), primary_key=True),
     db.Column("order_id", db.Integer, db.ForeignKey("order.id"),  primary_key=True)
+    # db.Column("total_quantity_per_product", db.Integer)
 )
 
 class Product(db.Model):
@@ -90,9 +104,10 @@ class Product(db.Model):
     quantity = db.Column(db.Integer)
     price = db.Column(db.Integer)
     img = db.Column(db.String(600))
-    date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-    
+    date = db.Column(db.DateTime, default=datetime.datetime.utcnow)  
     supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False)
+
+    # inventory = db.relationship('Inventory', backref='product', lazy=True, uselist=False)
     orders = db.relationship("Order", secondary=productorder, lazy=True)
 
     def serialize(self):
@@ -109,23 +124,22 @@ class Product(db.Model):
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     order_number = db.Column(db.Integer, unique=True)
-    payment_id = db.Column(db.Text)
+    payment_id = db.Column(db.Integer, unique=True)
     total = db.Column(db.Integer)
     status = db.Column(db.Boolean)
     sale_tax = db.Column(db.Integer)
     date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-    
     client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
     products = db.relationship('Product', secondary=productorder, lazy=True)
 
     def serialize(self):
         return{
+            "id": self.id,
             "order_number": self.order_number,
             "payment_id": self.payment_id,
             "total": self.total,
-            "date": self.date,
             "status": self.status,
             "sale_tax": self.sale_tax,
+            "date": self.date,
             "client_id":self.client_id
-            # "products":self.products
         }

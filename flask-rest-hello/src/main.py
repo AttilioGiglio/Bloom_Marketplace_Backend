@@ -5,6 +5,7 @@ import os
 import json
 import bcrypt
 import re
+import random
 from flask import Flask, request, jsonify, url_for
 from flask_migrate import Migrate
 from flask_swagger import swagger
@@ -12,7 +13,7 @@ from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
 from models import db, Client, Supplier, Information, Product, Order
-from flask_uploads import UploadSet, configure_uploads, IMAGES
+# from flask_uploads import UploadSet, configure_uploads, IMAGES
 from flask_jwt_extended import (
     JWTManager, jwt_required, create_access_token,
     get_jwt_identity
@@ -20,8 +21,8 @@ from flask_jwt_extended import (
 
 app = Flask(__name__)
 
-photos = UploadSet('photos', IMAGES)
-app.config['UPLOADED_PHOTOS_DEST'] = 'images'
+# photos = UploadSet('photos', IMAGES)
+# app.config['UPLOADED_PHOTOS_DEST'] = 'images'
 app.url_map.strict_slashes = False
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DB_CONNECTION_STRING')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -32,7 +33,7 @@ setup_admin(app)
 app.config['JWT_SECRET_KEY'] = 'fuckyou!!Youcan/tstolemy1password!bitch'
 jwt = JWTManager(app)
 
-configure_uploads(app, photos)
+# configure_uploads(app, photos)
 
 # Handle/serialize errors like a JSON object
 @app.errorhandler(APIException)
@@ -95,17 +96,20 @@ def loginClient():
 def signupSupplier():
     if request.method == "POST":
         new_supplier = json.loads(request.data)
-
+        password = request.json.get('password', None)
+        email = request.json.get('email', None)
+        hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         supplier = Supplier(
             name=new_supplier["name"], 
             email=new_supplier["email"], 
-            password=new_supplier["password"],
+            password=hashed,
             role=new_supplier["role"]
         )
 
         db.session.add(supplier)
         db.session.commit()
-        return jsonify({"exitoso": True}), 200
+        access_token = create_access_token(identity={"email":email})
+        return {"access_token":access_token}, 200
 
     if request.method == "GET":
         supplier_signup = Supplier.query.all()
@@ -184,23 +188,27 @@ def putProfileBusiness(id):
 def postProduct():
     new_product = json.loads(request.data)
 
-     f = request.files['image']
-     f.save(secure_filename(f.filename))
-     url = f.filename
+
+    # total = quantity * product.price
+    # grand_total += total
+    # quantity_total += quantity
+    #  f = request.files['image']
+    #  f.save(secure_filename(f.filename))
+    #  url = f.filename
 
     product = Product(
             sku_id=new_product["sku_id"], 
             name=new_product["name"], 
             description=new_product["description"],
-            quantity=new_product["quantity"],
-            img=f.filename,
+            quantity=new_product['quantity'],
+            # img=f.filename,
             price=new_product["price"],
             supplier_id=new_product["supplier_id"]
         )
   
     db.session.add(product)
     db.session.commit()
-    return jsonify({"exitoso": product}), 200
+    return jsonify({"exitoso": product.serialize()}), 200
 
 
 @app.route('/product_cards', methods=['GET'])
@@ -213,34 +221,55 @@ def getAllProduct():
 def postShoppingCart():
 
     new_order = json.loads(request.data)
-    # sales_tax =  total * 0.05
-    order=Order()
+    sales_tax =  new_order["total"] * 0.05
+    order_number = random.randint(1, 99999999)
+    payment_id = random.randint(1, 99999999)
+
+    order = Order(
+            order_number = order_number,
+            payment_id = payment_id,
+            total = new_order["total"],
+            sale_tax = sales_tax,
+            status = True,
+            client_id = new_order["client_id"]
+        )
+  
+    db.session.add(order)
+    db.session.commit()
+    
     id_list = list(map(lambda item: item["sku_id"], new_order["products"]))
     product_list = db.session.query(Product).filter(Product.sku_id.in_(id_list))
-    all_products = list(map(lambda product: product.serialize(), product_list))
-    
-    # for product in all_products:
-    #     order.products.append(product)
+    order_query = Order.query.filter_by(id=order.id).first()
 
-    # if new_order is not None:
-    #     order = Order(
-    #             total= new_order["total"],
-    #             sale_tax= sales_tax,
-    #             status=True,
-    #             client_id=new_order["client_id"],
-    #         )
-  
-    # db.session.add(order)
-    # db.session.commit()
-    return jsonify({"exitoso": all_products}), 200
-
-@app.route('/orders_list_business/<id>', methods=['GET'])
-def updateOrders():
-    order = Order.query.filter_by(client_id=id)
-    client = Client.query.get(id)
-
+    for product in product_list:
+        order_query.products.append(product)
+        db.session.add(order_query)
+        db.session.commit()
+        
     return jsonify({"exitoso": True}), 200
 
+@app.route('/orders_list_business', methods=['GET'])
+def getOrders():
+    order_query_all = Order.query.all()
+    
+    if order_query_all is not None:
+    
+        all_orders = list(map(lambda order: order.serialize(), order_query_all))
+
+        id_tuple = list(map(lambda item: item.client_id, order_query_all))
+        client_order = db.session.query(Client).filter(Client.id.in_(id_tuple))
+        all_clients = list(map(lambda order_client: order_client.serialize(), client_order))
+
+        return jsonify({"response": all_clients},{"response": all_orders}), 200
+
+@app.route('/products_list_business/<id>', methods=['GET'])
+def getProductsByOrder(id):
+ 
+    order_filter = Order.query.filter_by(id=id).first()
+    products = list(map(lambda item: item.serialize(), order_filter.products))
+    
+    return jsonify({"exitoso": products}), 200
+    
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':
     PORT = int(os.environ.get('PORT', 5000))

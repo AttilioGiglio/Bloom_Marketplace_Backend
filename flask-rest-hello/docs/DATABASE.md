@@ -42,8 +42,9 @@ all_people = list(map(lambda x: x.serialize(), people_query))
 
 # get just one person
 user1 = Person.query.get(person_id)
- ```
 
+all_products = list(map(lambda product: product.serialize(), product_list))
+ ``` 
 ## Inserting data
 
 Assuming you have a Person object in your models.py file.
