@@ -12,6 +12,7 @@ from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
 from models import db, Client, Supplier, Information, Product, Order
+from flask_uploads import UploadSet, configure_uploads, IMAGES
 from flask_jwt_extended import (
     JWTManager, jwt_required, create_access_token,
     get_jwt_identity
@@ -19,8 +20,8 @@ from flask_jwt_extended import (
 
 app = Flask(__name__)
 
-# photos = UploadSet('photos', IMAGES)
-# app.config['UPLOADED_PHOTOS_DEST'] = 'images'
+photos = UploadSet('photos', IMAGES)
+app.config['UPLOADED_PHOTOS_DEST'] = 'images'
 app.url_map.strict_slashes = False
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DB_CONNECTION_STRING')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -30,9 +31,8 @@ CORS(app)
 setup_admin(app)
 app.config['JWT_SECRET_KEY'] = 'fuckyou!!Youcan/tstolemy1password!bitch'
 jwt = JWTManager(app)
-bcrypt = Bcrypt(app)
-# configure_uploads(app, photos)
-# app.config['UPLOAD_PHOTOS_DEST'] = '/pictures'
+
+configure_uploads(app, photos)
 
 # Handle/serialize errors like a JSON object
 @app.errorhandler(APIException)
@@ -50,6 +50,7 @@ def signupClient():
     if request.method == "POST":
         new_client = json.loads(request.data)
         password = request.json.get('password', None)
+        email = request.json.get('email', None)
         hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
         client = Client(
@@ -62,7 +63,7 @@ def signupClient():
         db.session.add(client)
         db.session.commit()
         access_token = create_access_token(identity={"email":email})
-        return {"access_token":True}, 200
+        return {"access_token":access_token}, 200
     
     if request.method == "GET":
         client_signup = Client.query.all()
@@ -183,19 +184,23 @@ def putProfileBusiness(id):
 def postProduct():
     new_product = json.loads(request.data)
 
+     f = request.files['image']
+     f.save(secure_filename(f.filename))
+     url = f.filename
+
     product = Product(
             sku_id=new_product["sku_id"], 
             name=new_product["name"], 
             description=new_product["description"],
             quantity=new_product["quantity"],
-            # img=new_product["img"],
+            img=f.filename,
             price=new_product["price"],
             supplier_id=new_product["supplier_id"]
         )
   
     db.session.add(product)
     db.session.commit()
-    return jsonify({"exitoso": True}), 200
+    return jsonify({"exitoso": product}), 200
 
 
 @app.route('/product_cards', methods=['GET'])
@@ -204,24 +209,30 @@ def getAllProduct():
     all_products = list(map(lambda product: product.serialize(), products))
     return jsonify(all_products)
 
-@app.route('/checkout_step_one/<id>', methods=['POST'])
+@app.route('/checkout_step_one', methods=['POST'])
 def postShoppingCart():
 
     new_order = json.loads(request.data)
-    productlist = list(map(lambda product: Product.query.get(suppplier_id=product), id))
+    # sales_tax =  total * 0.05
+    order=Order()
+    id_list = list(map(lambda item: item["sku_id"], new_order["products"]))
+    product_list = db.session.query(Product).filter(Product.sku_id.in_(id_list))
+    all_products = list(map(lambda product: product.serialize(), product_list))
+    
+    # for product in all_products:
+    #     order.products.append(product)
 
-
-    order = Order(
-            total= new_order["total"],
-            status= new_order["status"],
-            sale_tax= new_order["sale_tax"],
-            client_id=new_order["client_id"],
-            products = list(map(lambda item: item, productlist))
-        )
+    # if new_order is not None:
+    #     order = Order(
+    #             total= new_order["total"],
+    #             sale_tax= sales_tax,
+    #             status=True,
+    #             client_id=new_order["client_id"],
+    #         )
   
-    db.session.add(order)
-    db.session.commit()
-    return jsonify({"exitoso": True}), 200
+    # db.session.add(order)
+    # db.session.commit()
+    return jsonify({"exitoso": all_products}), 200
 
 @app.route('/orders_list_business/<id>', methods=['GET'])
 def updateOrders():
