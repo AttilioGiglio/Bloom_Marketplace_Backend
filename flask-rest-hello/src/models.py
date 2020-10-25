@@ -10,7 +10,7 @@ class Client(db.Model):
     password = db.Column(db.String(250))
     role = db.Column(db.String(150))
 
-    order = db.relationship('Order', backref='client', lazy=True, uselist=False)
+    order = db.relationship('Order', backref='client', lazy=True)
 
     def __repr__(self):
         return '<User %r>' % self.username
@@ -38,7 +38,7 @@ class Supplier(db.Model):
     role = db.Column(db.String(150))
 
     information = db.relationship('Information', backref='supplier', uselist=False)
-    product = db.relationship('Product', backref='supplier', lazy=True) #uselist=False
+    product = db.relationship('Product', backref='supplier', lazy=True)
 
     def serialize(self):
         return{
@@ -77,18 +77,19 @@ class Information(db.Model):
             "suppplier_id": self.supplier_id,
         }
 
-# class Inventory(db.Model):
-#     id = db.Column(db.Integer, primary_key=True)
-#     supplier_stock_per_product = db.Column(db.Integer)
-#     total_supplier_stock = db.Column(db.Integer)
+class Inventory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    supplier_stock_per_product = db.Column(db.Integer)
+    total_supplier_stock = db.Column(db.Integer)
 
-#     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
 
-#      def serialize(self):
-#         return{
-#             "supplier_stock_per_product": self.supplier_stock_per_product,
-#             "total_supplier_stock": self.total_supplier_stock,
-#             "product_id": self.product_id       
+    def serialize(self):
+       return{
+           "supplier_stock_per_product": self.supplier_stock_per_product,
+           "total_supplier_stock": self.total_supplier_stock,
+           "product_id": self.product_id
+       }       
 
 productorder = db.Table('productorder',
     db.Column("product_id", db.Integer, db.ForeignKey("product.id"), primary_key=True),
@@ -103,15 +104,16 @@ class Product(db.Model):
     description = db.Column(db.Text)
     quantity = db.Column(db.Integer)
     price = db.Column(db.Integer)
-    img = db.Column(db.String(600))
     date = db.Column(db.DateTime, default=datetime.datetime.utcnow)  
     supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False)
-
-    # inventory = db.relationship('Inventory', backref='product', lazy=True, uselist=False)
+    
+    img = db.relationship('Img', backref='product', uselist=False)
+    inventory = db.relationship('Inventory', backref='product', lazy=True, uselist=False)
     orders = db.relationship("Order", secondary=productorder, lazy=True)
 
     def serialize(self):
         return{
+            "id": self.id,
             "sku_id": self.sku_id,
             "name": self.name,
             "description": self.description,
@@ -130,6 +132,7 @@ class Order(db.Model):
     sale_tax = db.Column(db.Integer)
     date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
+    
     products = db.relationship('Product', secondary=productorder, lazy=True)
 
     def serialize(self):
@@ -142,4 +145,20 @@ class Order(db.Model):
             "sale_tax": self.sale_tax,
             "date": self.date,
             "client_id":self.client_id
+        }
+
+class Img(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    img = db.Column(db.Text)
+    name = db.Column(db.Text)
+    mimetype = db.Column(db.Text)
+    
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+
+    def serialize(self):
+        return{
+            "id": self.id,
+            "img": self.img,
+            "name": self.name,
+            "mimetype": self.mimetype
         }

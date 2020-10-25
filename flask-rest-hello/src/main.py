@@ -12,12 +12,13 @@ from flask_swagger import swagger
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
-from models import db, Client, Supplier, Information, Product, Order
+from models import db, Client, Supplier, Information, Product, Order, Img
 # from flask_uploads import UploadSet, configure_uploads, IMAGES
 from flask_jwt_extended import (
     JWTManager, jwt_required, create_access_token,
     get_jwt_identity
 )
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
@@ -188,34 +189,41 @@ def putProfileBusiness(id):
 def postProduct():
     new_product = json.loads(request.data)
 
+    file = request.files['file']
+    if not pic:
+        return 'No pic uploaded!', 400
 
-    # total = quantity * product.price
-    # grand_total += total
-    # quantity_total += quantity
-    #  f = request.files['image']
-    #  f.save(secure_filename(f.filename))
-    #  url = f.filename
+    filename = secure_filename(pic.filename)
+    mimetype = pic.mimetype
+    if not filename or not mimetype:
+        return 'Bad upload!', 400
 
-    product = Product(
-            sku_id=new_product["sku_id"], 
-            name=new_product["name"], 
-            description=new_product["description"],
-            quantity=new_product['quantity'],
-            # img=f.filename,
-            price=new_product["price"],
-            supplier_id=new_product["supplier_id"]
-        )
-  
-    db.session.add(product)
+    img = Img(img=pic.read(), name=filename, mimetype=mimetype)
+    db.session.add(img)
     db.session.commit()
-    return jsonify({"exitoso": product.serialize()}), 200
+    return 'Img Uploaded!', 200
+    # product = Product(
+    #         sku_id=new_product["sku_id"], 
+    #         name=new_product["name"], 
+    #         description=new_product["description"],
+    #         quantity=new_product['quantity'],
+    #         # img=f.filename,
+    #         price=new_product["price"],
+    #         supplier_id=new_product["supplier_id"]
+    #     )
+  
+    # db.session.add(product)
+    # db.session.commit()
+    # return jsonify( {"exitoso": img.serialize()}), 200
 
 
 @app.route('/product_cards', methods=['GET'])
 def getAllProduct():
     products = Product.query.all()
     all_products = list(map(lambda product: product.serialize(), products))
-    return jsonify(all_products)
+    imgs = Img.query.all()
+    all_img = list(map(lambda img: img.serialize(), imgs))
+    return jsonify(all_products, all_img)
 
 @app.route('/checkout_step_one', methods=['POST'])
 def postShoppingCart():
@@ -237,8 +245,8 @@ def postShoppingCart():
     db.session.add(order)
     db.session.commit()
     
-    id_list = list(map(lambda item: item["sku_id"], new_order["products"]))
-    product_list = db.session.query(Product).filter(Product.sku_id.in_(id_list))
+    id_list = list(map(lambda item: item["id"], new_order["products"]))
+    product_list = db.session.query(Product).filter(Product.id.in_(id_list))
     order_query = Order.query.filter_by(id=order.id).first()
 
     for product in product_list:
@@ -246,7 +254,7 @@ def postShoppingCart():
         db.session.add(order_query)
         db.session.commit()
         
-    return jsonify({"exitoso": True}), 200
+    return jsonify({"exitoso": order_query.serialize()}), 200
 
 @app.route('/orders_list_business', methods=['GET'])
 def getOrders():

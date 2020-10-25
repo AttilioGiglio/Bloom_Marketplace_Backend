@@ -21,6 +21,7 @@ flask-admin = "*"
 flask-uploads = "*"
 flask-jwt-extended = "*"
 bcrypt = "*"
+werkzeug = "*"
 
 [requires]
 python_version = "3.8"
