@@ -59,9 +59,8 @@ def signupClient():
 
         db.session.add(client)
         db.session.commit()
-        access_token = create_access_token(identity={"email":email})
-        return {"access_token":access_token}, 200
-    
+        return jsonify(client.serialize()), 200
+
     if request.method == "GET":
         client_signup = Client.query.all()
 
@@ -117,8 +116,6 @@ def signupSupplier():
 
         db.session.add(supplier)
         db.session.commit()
-        access_token = create_access_token(identity={"email":email})
-        return {"access_token":access_token}, 200
 
     if request.method == "GET":
         supplier_signup = Supplier.query.all()
