@@ -113,9 +113,9 @@ def signupSupplier():
             password=hashed,
             role=new_supplier["role"]
         )
-
         db.session.add(supplier)
         db.session.commit()
+        return jsonify(supplier.serialize()), 200
 
     if request.method == "GET":
         supplier_signup = Supplier.query.all()
@@ -301,7 +301,7 @@ def getStock(id):
         total_supplier_stock = total_supplier_stock
     )
 
-    return jsonify({"exitoso":total_supplier_stock}), 200
+    return jsonify({"exitoso":products}), 200
     
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':
