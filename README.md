@@ -15,7 +15,7 @@ https://docs.sqlalchemy.org/en/13/orm/query.html#sqlalchemy.orm.query.Query.scal
 # configure_uploads(app, photos)
 # from flask_uploads import UploadSet, configure_uploads, IMAGES
 # from werkzeug.utils import secure_filename
-
+dasdsa
   # image_filename = photos.save(request.files['thefile'])  
     #         return 
     # if request.method == 'POST':
