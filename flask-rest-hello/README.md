@@ -1,3 +1,69 @@
+To storage image
+https://stackoverflow.com/questions/43309343/working-with-user-uploaded-image-in-flask
+https://stackoverflow.com/questions/31325655/python-flask-uploading-image
+https://stackoverflow.com/questions/62320284/react-best-practice-storing-images-on-server
+https://stackoverflow.com/questions/60957369/flask-reactjs-file-uploading-not-working}
+https://www.roytuts.com/python-flask-multiple-files-upload-example/
+https://docs.sqlalchemy.org/en/13/orm/query.html#sqlalchemy.orm.query.Query.scalar
+# UPLOAD_FOLDER = 'uploads/test'
+# ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
+# app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
+# app.config['UPLOAD_FOLDER'] = 'uploads/test'
+# photos = UploadSet('photos', IMAGES)
+# app.config['UPLOADED_PHOTOS_DEST'] = 'pictures'
+# configure_uploads(app, photos)
+# from flask_uploads import UploadSet, configure_uploads, IMAGES
+# from werkzeug.utils import secure_filename
+
+  # image_filename = photos.save(request.files['thefile'])  
+    #         return 
+    # if request.method == 'POST':
+    #     # check if the post request has the file part
+	# 	if 'file' not in request.files:
+	# 		flash('No file part')
+	# 		return redirect(request.url)
+	# 	file = request.files['file']
+	# 	if file.filename == '':
+	# 		flash('No file selected for uploading')
+	# 		return redirect(request.url)
+	# 	if file and allowed_file(file.filename):
+	# 		filename = secure_filename(file.filename)
+	# 		file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+	# 		flash('File successfully uploaded')
+	# 		return redirect('/')
+	# 	else:
+	# 		flash('Allowed file types are txt, pdf, png, jpg, jpeg, gif')
+	# 		return redirect(request.url)
+    
+    # file = request.files['inputFile']
+    # newFile = Img(data=file.read(), name=file.filename)
+    # db.session.add(newFile)
+    # db.sesison.commit()
+    # return 'saved'+file.filename+' to the database!'
+    
+    # if not pic:
+    #     return 'No pic uploaded!', 400
+    # new_img =request.json.get('image', None)
+    # filename = secure_filename(pic.filename)
+    # mimetype = pic.mimetype
+    # if not filename or not mimetype:
+    #     return 'Bad upload!', 400
+
+    # img = Img(img=pic.read(), name=filename, mimetype=mimetype)
+    # target = os.path.join(app.config['UPLOAD_FOLDER'], 'test')
+    # if not os.path.isdir(target):
+    #     os.mkdir(target)
+    # logger.info("welcome to upload`")
+    # file = request.files['file']
+    # filename = secure_filename(file.filename)
+    # destination = "/".join([target, filename])
+    # file.save(destination)
+    # session['uploadFilePath'] = destination
+    # response = "Whatever you wish too return"
+    # return response
+
+
 PENDIENTES
 
 - HACER FUNCION PARA ALMACENAR IMAGENES EN LA DB

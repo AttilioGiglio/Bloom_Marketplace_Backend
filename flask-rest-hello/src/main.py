@@ -12,18 +12,15 @@ from flask_swagger import swagger
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
-from models import db, Client, Supplier, Information, Product, Order, Img
-# from flask_uploads import UploadSet, configure_uploads, IMAGES
+from models import db, Client, Supplier, Information, Product, Order, Img, Inventory
 from flask_jwt_extended import (
     JWTManager, jwt_required, create_access_token,
     get_jwt_identity
 )
-from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-# photos = UploadSet('photos', IMAGES)
-# app.config['UPLOADED_PHOTOS_DEST'] = 'images'
+
 app.url_map.strict_slashes = False
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DB_CONNECTION_STRING')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -31,10 +28,9 @@ MIGRATE = Migrate(app, db)
 db.init_app(app)
 CORS(app)
 setup_admin(app)
-app.config['JWT_SECRET_KEY'] = 'fuckyou!!Youcan/tstolemy1password!bitch'
+app.config['JWT_SECRET_KEY'] = 'fuckyou!!Youcan/tstolemy1password!bitch123456789987654321'
 jwt = JWTManager(app)
 
-# configure_uploads(app, photos)
 
 # Handle/serialize errors like a JSON object
 @app.errorhandler(APIException)
@@ -42,7 +38,6 @@ def handle_invalid_usage(error):
     return jsonify(error.to_dict()), error.status_code
 
 # generate sitemap with all your endpoints
-
 @app.route('/')
 def sitemap():
     return generate_sitemap(app)
@@ -91,6 +86,19 @@ def loginClient():
 
     if user is None:
         return jsonify({"msg": "No existe usuario con ese correo"}), 404
+
+    if bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
+        access_token = create_access_token(identity={"email":email})
+        return {"access_token":access_token}, 200
+    else:
+        return 'Password erronea'
+
+    return jsonify(user.serialize()), 200
+
+@app.route('/token_client', methods=['GET'])
+@jwt_required
+def token_client():
+    user = Client.query.get(get_jwt_identity())
     return jsonify(user.serialize()), 200
 
 @app.route("/signup_business", methods=["POST", "GET"])
@@ -136,6 +144,19 @@ def loginSupplier():
 
     if user is None:
         return jsonify({"msg": "No existe usuario con ese correo"}), 404
+    
+    if bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
+        access_token = create_access_token(identity={"email":email})
+        return {"access_token":access_token}, 200
+    else:
+        return 'Password erronea'
+
+    return jsonify(user.serialize()), 200
+
+@app.route('/token_business', methods=['GET'])
+@jwt_required
+def token_supplier():
+    user = Supplier.query.get(get_jwt_identity())
     return jsonify(user.serialize()), 200
 
 @app.route("/profile_business", methods=["POST"])
@@ -187,34 +208,21 @@ def putProfileBusiness(id):
 
 @app.route('/add_product_business', methods=['POST'])
 def postProduct():
+
     new_product = json.loads(request.data)
-
-    file = request.files['file']
-    if not pic:
-        return 'No pic uploaded!', 400
-
-    filename = secure_filename(pic.filename)
-    mimetype = pic.mimetype
-    if not filename or not mimetype:
-        return 'Bad upload!', 400
-
-    img = Img(img=pic.read(), name=filename, mimetype=mimetype)
-    db.session.add(img)
-    db.session.commit()
-    return 'Img Uploaded!', 200
-    # product = Product(
-    #         sku_id=new_product["sku_id"], 
-    #         name=new_product["name"], 
-    #         description=new_product["description"],
-    #         quantity=new_product['quantity'],
-    #         # img=f.filename,
-    #         price=new_product["price"],
-    #         supplier_id=new_product["supplier_id"]
-    #     )
+    product = Product(
+            sku_id=new_product["sku_id"], 
+            name=new_product["name"], 
+            description=new_product["description"],
+            quantity=new_product['quantity'],
+            price=new_product["price"],
+            supplier_id=new_product["supplier_id"]
+        )
   
-    # db.session.add(product)
-    # db.session.commit()
-    # return jsonify( {"exitoso": img.serialize()}), 200
+    db.session.add(product)
+    db.session.commit()
+
+    return jsonify( {"exitoso": product.serialize()}), 200
 
 
 @app.route('/product_cards', methods=['GET'])
@@ -251,6 +259,7 @@ def postShoppingCart():
 
     for product in product_list:
         order_query.products.append(product)
+        product_stock = Inventory.query.filter_by(product_id=product['id']).update({'supplier_stock_per_product' : Inventory.supplier_stock_per_product - product['quantity']})
         db.session.add(order_query)
         db.session.commit()
         
@@ -277,6 +286,25 @@ def getProductsByOrder(id):
     products = list(map(lambda item: item.serialize(), order_filter.products))
     
     return jsonify({"exitoso": products}), 200
+
+@app.route('/summary_business/<id>', methods=['GET'])
+def getStock(id):
+    supplier_filter = Supplier.query.filter_by(id=id).first()   
+    id_supplier = supplier_filter.id
+    supplier_product_list = Product.query.filter_by(id=id_supplier)
+    products = list(map(lambda item: item.serialize(), supplier_product_list))
+    # product_list = Product.query.all()
+    # supplier_product_list = filter(lambda item: item.id == id_supplier, product_list)
+    # products = list(map(lambda item: item.serialize(), supplier_product_list))
+    total_supplier_stock = 0
+    for product in supplier_product_list:
+        total_supplier_stock += product.quantity
+    
+    inventory = Inventory(
+        total_supplier_stock = total_supplier_stock
+    )
+
+    return jsonify({"exitoso":total_supplier_stock}), 200
     
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':

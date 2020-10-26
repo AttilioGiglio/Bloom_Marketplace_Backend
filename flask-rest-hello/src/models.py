@@ -79,14 +79,12 @@ class Information(db.Model):
 
 class Inventory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    supplier_stock_per_product = db.Column(db.Integer)
     total_supplier_stock = db.Column(db.Integer)
 
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
 
     def serialize(self):
        return{
-           "supplier_stock_per_product": self.supplier_stock_per_product,
            "total_supplier_stock": self.total_supplier_stock,
            "product_id": self.product_id
        }       
@@ -107,7 +105,7 @@ class Product(db.Model):
     date = db.Column(db.DateTime, default=datetime.datetime.utcnow)  
     supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False)
     
-    img = db.relationship('Img', backref='product', uselist=False)
+    # img = db.relationship('Img', backref='product', uselist=False)
     inventory = db.relationship('Inventory', backref='product', lazy=True, uselist=False)
     orders = db.relationship("Order", secondary=productorder, lazy=True)
 
@@ -119,7 +117,6 @@ class Product(db.Model):
             "description": self.description,
             "quantity": self.quantity,
             "price": self.price,
-            "img": self.img,
             "suppplier_id": self.supplier_id,
         }
 
@@ -149,16 +146,14 @@ class Order(db.Model):
 
 class Img(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    img = db.Column(db.Text)
-    name = db.Column(db.Text)
-    mimetype = db.Column(db.Text)
+    data = db.Column(db.LargeBinary)
+    name = db.Column(db.String(300))
     
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
 
     def serialize(self):
         return{
             "id": self.id,
-            "img": self.img,
+            "data": self.data,
             "name": self.name,
-            "mimetype": self.mimetype
         }
