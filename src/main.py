@@ -87,10 +87,10 @@ def loginClient():
         return jsonify({"msg": "No existe usuario con ese correo"}), 404
 
     if bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
-        access_token = create_access_token(identity={"email":email})
+        access_token = create_access_token(identity=user.id, expires_delta=False)
         return {"access_token":access_token}, 200
     else:
-        return 'Password erronea'
+        return 'Password erronea!'
 
     return jsonify(user.serialize()), 200
 
@@ -143,7 +143,7 @@ def loginSupplier():
         return jsonify({"msg": "No existe usuario con ese correo"}), 404
     
     if bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
-        access_token = create_access_token(identity={"email":email})
+        access_token = create_access_token(identity=user.id, expires_delta=False)
         return {"access_token":access_token}, 200
     else:
         return 'Password erronea'
@@ -194,7 +194,7 @@ def putProfileBusiness(id):
         information.address = request.json.get('address', information.address) 
         information.comuna = request.json.get('comuna', information.comuna) 
         information.region = request.json.get('region', information.region)
-        db.session.add(information)
+        # db.session.add(information)
         db.session.commit()
         return jsonify({"msge": "Actualizacion de pefil realizado"}), 200
     
@@ -207,7 +207,8 @@ def putProfileBusiness(id):
 def postProduct(id):
 
     new_product = json.loads(request.data)
-    sku_id=new_product["sku_id"]
+    sku_id = new_product['sku_id'] if new_product['sku_id'] > 0 else random.randint(1,999999) 
+
     product_old = Product.query.filter_by(sku_id=sku_id).filter_by(supplier_id=id).first()
 
     if product_old is None:
@@ -220,19 +221,18 @@ def postProduct(id):
             supplier_id=new_product["supplier_id"]
         )
         
+        inventory = Inventory()
+        inventory.total_supplier_stock=new_product['quantity']
         db.session.add(product)
         db.session.commit()
         return jsonify(product.serialize()), 200
 
-    product_old.sku_id = sku_id
-    product_old.name = new_product['name']
-    product_old.description = new_product["description"]
-    product_old.quantity = product_old.quantity + new_product['quantity']
-    product_old.price = new_product["price"]
-    product_old.supplier_id = new_product["supplier_id"]
-    db.session.add(product_old)
-    db.session.commit()
-    return jsonify(product_old.serialize()), 200
+    if product_old is not None:
+        stock_old_product= product_old.quantity + new_product['quantity']
+        inventory_query = Inventory.query.filter_by(product_id=product_old.id).first()
+        inventory_query.total_supplier_stock = stock_old_product
+        db.session.commit()
+        return jsonify(inventory_query.serialize()), 200
 
 @app.route('/product_cards', methods=['GET'])
 def getAllProduct():
@@ -242,14 +242,19 @@ def getAllProduct():
     all_img = list(map(lambda img: img.serialize(), imgs))
     return jsonify(all_products, all_img)
 
+# Create order (adding all products from checkout to initialization new object from class Order) + Update Stock from Inventory Table.
 @app.route('/checkout_step_one', methods=['POST'])
 def postShoppingCart():
 
+# bring from endpoing json data post it from client-side and turn it from json data to python code.
     new_order = json.loads(request.data)
-    sales_tax =  new_order["total"] * 0.05
-    order_number = random.randint(1, 99999999)
-    payment_id = random.randint(1, 99999999)
 
+    sales_tax =  new_order["total"] * 0.05
+
+    order_number = random.randint(1, 99999999)
+
+    payment_id = random.randint(1, 99999999)
+# Initialitate a new object from class Order
     order = Order(
             order_number = order_number,
             payment_id = payment_id,
@@ -258,25 +263,30 @@ def postShoppingCart():
             status = True,
             client_id = new_order["client_id"]
         )
-  
-    db.session.add(order)
-    db.session.commit()
-    
-    id_list = list(map(lambda item: item["sku_id"], new_order["products"]))
-    product_list = db.session.query(Product).filter(Product.sku_id.in_(id_list))
-    order_query = Order.query.filter_by(id=order.id).first()
+        
 
+    db.session.add(order)
+
+    db.session.commit()
+
+
+    id_list = list(map(lambda item: item["sku_id"], new_order["products"]))
+
+    product_list = db.session.query(Product).filter(Product.sku_id.in_(id_list)).all()
+    print(product_list)
+
+    order_query = Order.query.filter_by(id=order.id).first()
+ 
     for product in product_list:
         order_query.products.append(product)
-        stock_old = Inventory.query.filter_by(product_id=product.id).first()
-        if stock_old is not None:
-            quantity=list(map(lambda item: item.id == product.id, new_order['products']))
-            stock_old.total_supplier_stock = stock_old.total_supplier_stock - quantity['quantity']
-            db.session.add(stock_old)
-            db.session.commit()
-            return jsonify({"exitoso": stock_old.serialize()}), 200
-    return jsonify({"msg":"Ningun producto tiene inventario"}), 400
+        db.session.commit()
         
+    for product in new_order['products']:
+        stock_old = Inventory.query.filter_by(product_id=product['id']).first()
+        if stock_old is not None:
+            stock_old.total_supplier_stock = stock_old.total_supplier_stock - product['quantity']
+            db.session.commit()
+        return jsonify({"exitoso": True}), 200             
 
 @app.route('/orders_list_business', methods=['GET'])
 def getOrders():
