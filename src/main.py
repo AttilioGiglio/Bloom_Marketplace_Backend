@@ -137,7 +137,7 @@ def loginSupplier():
     if not password:
         return jsonify({"msg": "No existe clave"}), 400
 
-    user = Supplier.query.filter_by(email=email, role="business").first()
+    user = Supplier.query.filter_by(email=email, password=password, role="business").first()
 
     if user is None:
         return jsonify({"msg": "No existe usuario con ese correo"}), 404
@@ -194,7 +194,7 @@ def putProfileBusiness(id):
         information.address = request.json.get('address', information.address) 
         information.comuna = request.json.get('comuna', information.comuna) 
         information.region = request.json.get('region', information.region)
-
+        db.session.add(information)
         db.session.commit()
         return jsonify({"msge": "Actualizacion de pefil realizado"}), 200
     
@@ -203,24 +203,36 @@ def putProfileBusiness(id):
             information = Information.query.filter_by(supplier_id=id).first()
             return jsonify(information.serialize()), 200
 
-@app.route('/add_product_business', methods=['POST'])
-def postProduct():
+@app.route('/add_product_business/<id>', methods=['POST'])
+def postProduct(id):
 
     new_product = json.loads(request.data)
-    product = Product(
-            sku_id=new_product["sku_id"], 
+    sku_id=new_product["sku_id"]
+    product_old = Product.query.filter_by(sku_id=sku_id).filter_by(supplier_id=id).first()
+
+    if product_old is None:
+        product = Product(
+            sku_id=sku_id, 
             name=new_product["name"], 
             description=new_product["description"],
             quantity=new_product['quantity'],
             price=new_product["price"],
             supplier_id=new_product["supplier_id"]
         )
-  
-    db.session.add(product)
+        
+        db.session.add(product)
+        db.session.commit()
+        return jsonify(product.serialize()), 200
+
+    product_old.sku_id = sku_id
+    product_old.name = new_product['name']
+    product_old.description = new_product["description"]
+    product_old.quantity = product_old.quantity + new_product['quantity']
+    product_old.price = new_product["price"]
+    product_old.supplier_id = new_product["supplier_id"]
+    db.session.add(product_old)
     db.session.commit()
-
-    return jsonify( {"exitoso": product.serialize()}), 200
-
+    return jsonify(product_old.serialize()), 200
 
 @app.route('/product_cards', methods=['GET'])
 def getAllProduct():
@@ -250,17 +262,21 @@ def postShoppingCart():
     db.session.add(order)
     db.session.commit()
     
-    id_list = list(map(lambda item: item["id"], new_order["products"]))
-    product_list = db.session.query(Product).filter(Product.id.in_(id_list))
+    id_list = list(map(lambda item: item["sku_id"], new_order["products"]))
+    product_list = db.session.query(Product).filter(Product.sku_id.in_(id_list))
     order_query = Order.query.filter_by(id=order.id).first()
 
     for product in product_list:
         order_query.products.append(product)
-        product_stock = Inventory.query.filter_by(product_id=product['id']).update({'supplier_stock_per_product' : Inventory.supplier_stock_per_product - product['quantity']})
-        db.session.add(order_query)
-        db.session.commit()
+        stock_old = Inventory.query.filter_by(product_id=product.id).first()
+        if stock_old is not None:
+            quantity=list(map(lambda item: item.id == product.id, new_order['products']))
+            stock_old.total_supplier_stock = stock_old.total_supplier_stock - quantity['quantity']
+            db.session.add(stock_old)
+            db.session.commit()
+            return jsonify({"exitoso": stock_old.serialize()}), 200
+    return jsonify({"msg":"Ningun producto tiene inventario"}), 400
         
-    return jsonify({"exitoso": order_query.serialize()}), 200
 
 @app.route('/orders_list_business', methods=['GET'])
 def getOrders():
@@ -286,13 +302,10 @@ def getProductsByOrder(id):
 
 @app.route('/summary_business/<id>', methods=['GET'])
 def getStock(id):
-    supplier_filter = Supplier.query.filter_by(id=id).first()   
-    id_supplier = supplier_filter.id
-    supplier_product_list = Product.query.filter_by(id=id_supplier)
+
+    supplier_product_list = Product.query.filter_by(supplier_id=id)
     products = list(map(lambda item: item.serialize(), supplier_product_list))
-    # product_list = Product.query.all()
-    # supplier_product_list = filter(lambda item: item.id == id_supplier, product_list)
-    # products = list(map(lambda item: item.serialize(), supplier_product_list))
+
     total_supplier_stock = 0
     for product in supplier_product_list:
         total_supplier_stock += product.quantity
@@ -301,7 +314,7 @@ def getStock(id):
         total_supplier_stock = total_supplier_stock
     )
 
-    return jsonify({"exitoso":products}), 200
+    return jsonify({"exitoso":total_supplier_stock}), 200
     
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':
