@@ -205,8 +205,9 @@ def putProfileBusiness(id):
 def postProduct(id):
 
     new_product = json.loads(request.data)
-    sku_id = new_product['sku_id'] if new_product['sku_id'] > 0 else random.randint(1,999999) 
-
+    print(new_product)
+    sku_id = new_product['sku_id'] if "sku_id" in new_product else random.randint(1,999999) 
+    
     product_old = Product.query.filter_by(sku_id=sku_id).filter_by(supplier_id=id).first()
 
     if product_old is None:
@@ -216,7 +217,7 @@ def postProduct(id):
             description=new_product["description"],
             quantity=new_product['quantity'],
             price=new_product["price"],
-            supplier_id=new_product["supplier_id"]
+            supplier_id=id
         )
         
         inventory = Inventory()
@@ -241,7 +242,7 @@ def getAllProduct():
     return jsonify(all_products)
 
 # Create order (adding all products from checkout to initialization new object from class Order) + Update Stock from Inventory Table.
-@app.route('/checkout_step_one', methods=['POST'])
+@app.route('/checkout_step_one/<id>', methods=['POST'])
 def postShoppingCart():
 
 # bring from endpoing json data post it from client-side and turn it from json data to python code.
@@ -259,7 +260,7 @@ def postShoppingCart():
             total = new_order["total"],
             sale_tax = sales_tax,
             status = True,
-            client_id = new_order["client_id"]
+            client_id = id
         )
         
 
