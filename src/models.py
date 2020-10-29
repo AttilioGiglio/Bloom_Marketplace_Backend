@@ -12,22 +12,11 @@ class Client(db.Model):
 
     order = db.relationship('Order', backref='client', lazy=True)
 
-    def __repr__(self):
-        return '<User %r>' % self.username
-
     def serialize(self):
         return {
             "id": self.id,
             "name": self.name,
             "email": self.email,
-        }
-    
-    def serialize_orders(self):
-        return{
-            "id": self.id,
-            "name": self.name,
-            "email": self.email,
-            "order": list(map(lambda x: x.serialize(), self.order))
         }
 
 class Supplier(db.Model):

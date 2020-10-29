@@ -81,10 +81,8 @@ def loginClient():
     if not password:
         return jsonify({"msg": "No existe clave"}), 400
 
-    user = Client.query.filter_by(email=email, role="client").first()
-
-    if user is None:
-        return jsonify({"msg": "No existe usuario con ese correo"}), 404
+    user = Client.query.filter_by(email=email).first()
+    print(user)
 
     if bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
         access_token = create_access_token(identity=user.id, expires_delta=False)
@@ -137,7 +135,7 @@ def loginSupplier():
     if not password:
         return jsonify({"msg": "No existe clave"}), 400
 
-    user = Supplier.query.filter_by(email=email, password=password, role="business").first()
+    user = Supplier.query.filter_by(email=email).first()
 
     if user is None:
         return jsonify({"msg": "No existe usuario con ese correo"}), 404
@@ -238,9 +236,9 @@ def postProduct(id):
 def getAllProduct():
     products = Product.query.all()
     all_products = list(map(lambda product: product.serialize(), products))
-    imgs = Img.query.all()
-    all_img = list(map(lambda img: img.serialize(), imgs))
-    return jsonify(all_products, all_img)
+    # imgs = Img.query.all()
+    # all_img = list(map(lambda img: img.serialize(), imgs))
+    return jsonify(all_products)
 
 # Create order (adding all products from checkout to initialization new object from class Order) + Update Stock from Inventory Table.
 @app.route('/checkout_step_one', methods=['POST'])
@@ -329,4 +327,4 @@ def getStock(id):
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':
     PORT = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=PORT, debug=False)
+    app.run(host='127.0.0.1', port=PORT, debug=False)
