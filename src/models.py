@@ -44,8 +44,7 @@ class Information(db.Model):
     card_name = db.Column(db.String(150))
     card_number = db.Column(db.Integer)
     cvv = db.Column(db.Integer)
-    month = db.Column(db.String(50))
-    year = db.Column(db.Integer)
+    date= db.Column(db.String(150))
     address = db.Column(db.String(200))
     comuna = db.Column(db.String(100))
     region = db.Column(db.String(100))
@@ -58,8 +57,7 @@ class Information(db.Model):
             "card_name": self.card_name,
             "card_number": self.card_number,
             "cvv": self.cvv,
-            "month": self.month,
-            "year":self.year,
+            "date":self.date,
             "address": self.address,
             "comuna": self.comuna,
             "region": self.region,
@@ -122,6 +120,7 @@ class Order(db.Model):
     products = db.relationship('Product', secondary=productorder, lazy=True)
 
     def serialize(self):
+        products = list(map(lambda product: product.serialize(), self.products))
         return{
             "id": self.id,
             "order_number": self.order_number,
@@ -130,7 +129,25 @@ class Order(db.Model):
             "status": self.status,
             "sale_tax": self.sale_tax,
             "date": self.date,
-            "client_id":self.client_id
+            "client_id":self.client_id,
+            'client':self.client.name,
+            "products": products
+        }
+
+    def serialize_by_supplier(self, supplier_id):
+        # products = list(filter(lambda product: product if product.supplier_id == supplier_id else None, self.products ))
+        products = list(map(lambda product: product.serialize(), self.products))
+        return{
+            "id": self.id,
+            "order_number": self.order_number,
+            "payment_id": self.payment_id,
+            "total": self.total,
+            "status": self.status,
+            "sale_tax": self.sale_tax,
+            "date": self.date,
+            "client_id":self.client_id,
+            'client':self.client.name,
+            "products": products
         }
 
 class Img(db.Model):

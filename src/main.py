@@ -154,48 +154,42 @@ def token_supplier():
     user = Supplier.query.get(get_jwt_identity())
     return jsonify(user.serialize()), 200
 
-@app.route("/profile_business", methods=["POST"])
-def postProfileBusiness():
+@app.route("/profile_business/<id>", methods=["POST"])
+def postProfileBusiness(id):
     info_supplier = json.loads(request.data)
-
-    information = Information(
-        business_legal_name=info_supplier["business_legal_name"], 
-        business_id=info_supplier["business_id"],
-        card_name=info_supplier["card_name"], 
-        card_number=info_supplier["card_number"], 
-        cvv=info_supplier["cvv"],
-        month=info_supplier["month"],
-        year=info_supplier["year"],
-        address=info_supplier["address"], 
-        comuna=info_supplier["comuna"],
-        region=info_supplier["region"],
-        supplier_id=info_supplier["supplier_id"]
-    )
-
-    db.session.add(information)
-    db.session.commit()
-    return jsonify({"exitoso": True}), 200
-
-@app.route("/profile_business/<id>", methods=["PUT", "GET"])
-def putProfileBusiness(id):
-    if request.method == "PUT":
-        if id is None:
-            return jsonify({"msge": "bad request"}), 400        
-
-        information = Information.query.filter_by(supplier_id=id).first()
-        information.business_legal_name = request.json.get('business_legal_name', information.business_legal_name)
-        information.business_id = request.json.get('business_id', information.business_id)
-        information.card_name = request.json.get('card_name', information.card_name)
-        information.card_number = request.json.get('card_number', information.card_number)
-        information.cvv = request.json.get('cvv', information.cvv)
-        information.year = request.json.get('year', information.year)
-        information.address = request.json.get('address', information.address) 
-        information.comuna = request.json.get('comuna', information.comuna) 
-        information.region = request.json.get('region', information.region)
-        # db.session.add(information)
+    info_old = Information.query.filter_by(business_id=info_supplier["business_id"], business_legal_name=info_supplier["business_legal_name"]).filter_by(supplier_id=id).first()
+    if info_old is None:
+        information = Information(
+            business_legal_name=info_supplier["business_legal_name"], 
+            business_id=info_supplier["business_id"],
+            card_name=info_supplier["card_name"], 
+            card_number=info_supplier["card_number"], 
+            cvv=info_supplier["cvv"],
+            date=info_supplier['date'],
+            address=info_supplier["address"], 
+            comuna=info_supplier["comuna"],
+            region=info_supplier["region"],
+            supplier_id=id
+        )
+        db.session.add(information)
+        db.session.commit()
+        return jsonify({"exitoso": True}), 200
+    if info_old is not None:
+        info_old = Information.query.filter_by(supplier_id=id).first()
+        info_old.business_legal_name = request.json.get('business_legal_name', info_old.business_legal_name)
+        info_old.business_id = request.json.get('business_id', info_old.business_id)
+        info_old.card_name = request.json.get('card_name', info_old.card_name)
+        info_old.card_number = request.json.get('card_number', info_old.card_number)
+        info_old.cvv = request.json.get('cvv', info_old.cvv)
+        info_old.date = request.json.get('year', info_old.date)
+        info_old.address = request.json.get('address', info_old.address) 
+        info_old.comuna = request.json.get('comuna', info_old.comuna) 
+        info_old.region = request.json.get('region', info_old.region)
         db.session.commit()
         return jsonify({"msge": "Actualizacion de pefil realizado"}), 200
-    
+
+@app.route("/profile_business/<id>", methods=["GET"])
+def putProfileBusiness(id):
     if request.method == "GET":
         if id is not None:
             information = Information.query.filter_by(supplier_id=id).first()
@@ -243,11 +237,11 @@ def getAllProduct():
 
 # Create order (adding all products from checkout to initialization new object from class Order) + Update Stock from Inventory Table.
 @app.route('/checkout_step_one/<id>', methods=['POST'])
-def postShoppingCart():
+def postShoppingCart(id):
 
 # bring from endpoing json data post it from client-side and turn it from json data to python code.
     new_order = json.loads(request.data)
-
+    print(id)
     sales_tax =  new_order["total"] * 0.05
 
     order_number = random.randint(1, 99999999)
@@ -269,9 +263,9 @@ def postShoppingCart():
     db.session.commit()
 
 
-    id_list = list(map(lambda item: item["sku_id"], new_order["products"]))
+    id_list = list(map(lambda item: item["id"], new_order["products"]))
 
-    product_list = db.session.query(Product).filter(Product.sku_id.in_(id_list)).all()
+    product_list = db.session.query(Product).filter(Product.id.in_(id_list)).all()
     print(product_list)
 
     order_query = Order.query.filter_by(id=order.id).first()
@@ -287,19 +281,14 @@ def postShoppingCart():
             db.session.commit()
         return jsonify({"exitoso": True}), 200             
 
-@app.route('/orders_list_business', methods=['GET'])
-def getOrders():
-    order_query_all = Order.query.all()
-    
-    if order_query_all is not None:
-    
-        all_orders = list(map(lambda order: order.serialize(), order_query_all))
+@app.route('/orders_list_business/<id>', methods=['GET'])
+def getOrders(id):
 
-        id_tuple = list(map(lambda item: item.client_id, order_query_all))
-        client_order = db.session.query(Client).filter(Client.id.in_(id_tuple))
-        all_clients = list(map(lambda order_client: order_client.serialize(), client_order))
+    order_query = Order.query.filter(Order.products.any(Supplier.id == id)).all()
+    order_list = list(map(lambda order: order.serialize_by_supplier(id), order_query))
 
-        return jsonify({"response": all_clients},{"response": all_orders}), 200
+    return jsonify({"response": order_list}),200
+
 
 @app.route('/products_list_business/<id>', methods=['GET'])
 def getProductsByOrder(id):
@@ -322,6 +311,8 @@ def getStock(id):
     inventory = Inventory(
         total_supplier_stock = total_supplier_stock
     )
+
+    
 
     return jsonify({"exitoso":total_supplier_stock}), 200
     
