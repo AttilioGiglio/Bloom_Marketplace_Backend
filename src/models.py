@@ -67,6 +67,7 @@ class Information(db.Model):
 class Inventory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     total_supplier_stock = db.Column(db.Integer)
+    date = db.Column(db.DateTime, default=datetime.datetime.utcnow)  
 
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
 
@@ -79,30 +80,32 @@ class Inventory(db.Model):
 productorder = db.Table('productorder',
     db.Column("product_id", db.Integer, db.ForeignKey("product.id"), primary_key=True),
     db.Column("order_id", db.Integer, db.ForeignKey("order.id"),  primary_key=True)
-    # db.Column("total_quantity_per_product", db.Integer)
 )
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    sku_id = db.Column(db.Integer)
+    category = db.Column(db.String(150))
+    sku_id = db.Column(db.String(300))
     name = db.Column(db.String(150))
     description = db.Column(db.Text)
-    quantity = db.Column(db.Integer)
+    quantity_in = db.Column(db.Integer)
+    quantity_out = db.Column(db.Integer)
     price = db.Column(db.Integer)
     date = db.Column(db.DateTime, default=datetime.datetime.utcnow)  
     supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False)
     
-    # img = db.relationship('Img', backref='product', uselist=False)
     inventory = db.relationship('Inventory', backref='product', lazy=True, uselist=False)
     orders = db.relationship("Order", secondary=productorder, lazy=True)
 
     def serialize(self):
         return{
             "id": self.id,
+            "category": self.category,
             "sku_id": self.sku_id,
             "name": self.name,
             "description": self.description,
-            "quantity": self.quantity,
+            "quantity_in": self.quantity_in,
+            "quantity_out": self.quantity_out,
             "price": self.price,
             "suppplier_id": self.supplier_id,
         }

@@ -199,29 +199,43 @@ def putProfileBusiness(id):
 def postProduct(id):
 
     new_product = json.loads(request.data)
-    print(new_product)
-    sku_id = new_product['sku_id'] if "sku_id" in new_product else random.randint(1,999999) 
+    product_name = None
+    # start new code to fix to discriminate between new and old product.. I am doing with the name because if not I will need to set de sku_id on the front to the backend.
+    # I think this code for name I should do it on models
+    name_by_product = Product.query.filter_by(supplier_id=id).all()
+    for item in name_by_product:
+        if item.name == new_product["name"]:
+            product_name = item.name
+        else:
+            product_name = new_product["name"]
     
+    # finish new code to fix to discriminate between new and old product
+
+    sku_id = new_product['sku_id'] if product_name == new_product["name"] else random.randint(1,999999) 
+    
+    # sku_id = new_product['sku_id'] if "sku_id" in new_product else random.randint(1,999999) 
+
     product_old = Product.query.filter_by(sku_id=sku_id).filter_by(supplier_id=id).first()
 
     if product_old is None:
         product = Product(
+            category=new_product['category'],
             sku_id=sku_id, 
             name=new_product["name"], 
             description=new_product["description"],
-            quantity=new_product['quantity'],
+            quantity_in=new_product['quantity_in'],
             price=new_product["price"],
             supplier_id=id
         )
         
         inventory = Inventory()
-        inventory.total_supplier_stock=new_product['quantity']
+        inventory['total_supplier_stock'] = new_product['quantity_in']
         db.session.add(product)
         db.session.commit()
         return jsonify(product.serialize()), 200
 
     if product_old is not None:
-        stock_old_product= product_old.quantity + new_product['quantity']
+        stock_old_product= product_old.quantity_in + new_product['quantity_in']
         inventory_query = Inventory.query.filter_by(product_id=product_old.id).first()
         inventory_query.total_supplier_stock = stock_old_product
         db.session.commit()
@@ -231,17 +245,14 @@ def postProduct(id):
 def getAllProduct():
     products = Product.query.all()
     all_products = list(map(lambda product: product.serialize(), products))
-    # imgs = Img.query.all()
-    # all_img = list(map(lambda img: img.serialize(), imgs))
     return jsonify(all_products)
 
 # Create order (adding all products from checkout to initialization new object from class Order) + Update Stock from Inventory Table.
 @app.route('/checkout_step_one/<id>', methods=['POST'])
 def postShoppingCart(id):
-
-# bring from endpoing json data post it from client-side and turn it from json data to python code.
+# bring from endpoint json data post it from client-side and turn it from json data to python code.
     new_order = json.loads(request.data)
-    print(id)
+
     sales_tax =  new_order["total"] * 0.05
 
     order_number = random.randint(1, 99999999)
@@ -262,7 +273,6 @@ def postShoppingCart(id):
 
     db.session.commit()
 
-
     id_list = list(map(lambda item: item["id"], new_order["products"]))
 
     product_list = db.session.query(Product).filter(Product.id.in_(id_list)).all()
@@ -275,9 +285,13 @@ def postShoppingCart(id):
         db.session.commit()
         
     for product in new_order['products']:
+        product_old = Product.query.filter_by(id=product['id']).first()
+        if stock_old is not None:
+            product_old.quantity_out = product['quantity_out']
+            db.session.commit()
         stock_old = Inventory.query.filter_by(product_id=product['id']).first()
         if stock_old is not None:
-            stock_old.total_supplier_stock = stock_old.total_supplier_stock - product['quantity']
+            stock_old.total_supplier_stock = stock_old.total_supplier_stock - product['quantity_out']
             db.session.commit()
         return jsonify({"exitoso": True}), 200             
 
@@ -299,22 +313,23 @@ def getProductsByOrder(id):
     return jsonify({"exitoso": products}), 200
 
 @app.route('/summary_business/<id>', methods=['GET'])
-def getStock(id):
+# supplier id
+def getSummaryBusinessData(id):
 
-    supplier_product_list = Product.query.filter_by(supplier_id=id)
-    products = list(map(lambda item: item.serialize(), supplier_product_list))
+    # supplier_product_list = Product.query.filter_by(supplier_id=id)
+    # # products = list(map(lambda item: item.serialize(), supplier_product_list))
 
-    total_supplier_stock = 0
-    for product in supplier_product_list:
-        total_supplier_stock += product.quantity
+    # totale_supplier_stock = 0
+    # for product in supplier_product_list:
+    #     totale_supplier_stock += product.quantity
     
-    inventory = Inventory(
-        total_supplier_stock = total_supplier_stock
-    )
+    # inventory = Inventory(
+    #     total_supplier_stock = totale_supplier_stock
+    # )
 
     
 
-    return jsonify({"exitoso":total_supplier_stock}), 200
+    return jsonify({"stock":total_supplier_stock}), 200
     
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':
