@@ -242,9 +242,12 @@ def postProduct(id):
 
 @app.route('/add_image_business/<id>', methods=['POST'])
 def updateImage(id):
-    print(request.files)
-    Cloudinary.uploader.upload(request.files[0])
-    return jsonify('all good my friend'), 200
+    product= db.session.query(Product).filter_by(supplier_id=id).order_by(Product.id.desc()).first()
+    print(product)
+    result =cloudinary.uploader.upload(request.files['product_image'])
+    product.img = result["secure_url"]
+    db.session.commit()
+    return jsonify(product.serialize()), 200
 
 @app.route('/product_cards', methods=['GET'])
 def getAllProduct():
@@ -291,8 +294,10 @@ def postShoppingCart(id):
         
     for product in new_order['products']:
         product_old = Product.query.filter_by(id=product['id']).first()
+        print(product_old)
         if product_old is not None:
-            product_old.quantity_out = product["quantity_out"]
+            product_old.quantity_out = int(product_old.quantity_out) + int(product["quantity_out"])
+            print(product["quantity_out"])
             db.session.commit()
         stock_old = Inventory.query.filter_by(product_id=product['id']).first()
         if stock_old is not None:
