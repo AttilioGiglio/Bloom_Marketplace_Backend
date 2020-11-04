@@ -17,6 +17,8 @@ from flask_jwt_extended import (
     JWTManager, jwt_required, create_access_token,
     get_jwt_identity
 )
+import cloudinary
+import cloudinary.uploader
 
 app = Flask(__name__)
 
@@ -241,6 +243,7 @@ def postProduct(id):
 @app.route('/add_image_business/<id>', methods=['POST'])
 def updateImage(id):
     print(request.files)
+    Cloudinary.uploader.upload(request.files[0])
     return jsonify('all good my friend'), 200
 
 @app.route('/product_cards', methods=['GET'])
