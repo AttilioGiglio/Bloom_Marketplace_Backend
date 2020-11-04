@@ -91,6 +91,7 @@ class Product(db.Model):
     quantity_in = db.Column(db.Integer)
     quantity_out = db.Column(db.Integer)
     price = db.Column(db.Integer)
+    img = db.Column(db.String(500))
     date = db.Column(db.DateTime, default=datetime.datetime.utcnow)  
     supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False)
     
@@ -107,7 +108,8 @@ class Product(db.Model):
             "quantity_in": self.quantity_in,
             "quantity_out": self.quantity_out,
             "price": self.price,
-            "suppplier_id": self.supplier_id,
+            "img": self.img,
+            "suppplier_id": self.supplier_id
         }
 
 class Order(db.Model):

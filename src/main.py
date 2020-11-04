@@ -136,9 +136,6 @@ def loginSupplier():
         return jsonify({"msg": "No existe clave"}), 400
 
     user = Supplier.query.filter_by(email=email).first()
-
-    if user is None:
-        return jsonify({"msg": "No existe usuario con ese correo"}), 404
     
     if bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
         access_token = create_access_token(identity=user.id, expires_delta=False)
@@ -197,7 +194,6 @@ def putProfileBusiness(id):
 
 @app.route('/add_product_business/<id>', methods=['POST'])
 def postProduct(id):
-
     new_product = json.loads(request.data)
     product_name = None
     # start new code to fix to discriminate between new and old product.. I am doing with the name because if not I will need to set de sku_id on the front to the backend.
@@ -219,17 +215,17 @@ def postProduct(id):
 
     if product_old is None:
         product = Product(
-            category=new_product['category'],
+            category=new_product["category"],
             sku_id=sku_id, 
             name=new_product["name"], 
             description=new_product["description"],
-            quantity_in=new_product['quantity_in'],
+            quantity_in=new_product["quantity_in"],
             price=new_product["price"],
             supplier_id=id
         )
         
         inventory = Inventory()
-        inventory['total_supplier_stock'] = new_product['quantity_in']
+        inventory.total_supplier_stock = new_product['quantity_in']
         db.session.add(product)
         db.session.commit()
         return jsonify(product.serialize()), 200
@@ -240,6 +236,12 @@ def postProduct(id):
         inventory_query.total_supplier_stock = stock_old_product
         db.session.commit()
         return jsonify(inventory_query.serialize()), 200
+
+
+@app.route('/add_image_business/<id>', methods=['POST'])
+def updateImage(id):
+    print(request.files)
+    return jsonify('all good my friend'), 200
 
 @app.route('/product_cards', methods=['GET'])
 def getAllProduct():
@@ -286,8 +288,8 @@ def postShoppingCart(id):
         
     for product in new_order['products']:
         product_old = Product.query.filter_by(id=product['id']).first()
-        if stock_old is not None:
-            product_old.quantity_out = product['quantity_out']
+        if product_old is not None:
+            product_old.quantity_out = product["quantity_out"]
             db.session.commit()
         stock_old = Inventory.query.filter_by(product_id=product['id']).first()
         if stock_old is not None:
