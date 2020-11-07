@@ -19,6 +19,8 @@ from flask_jwt_extended import (
 )
 import cloudinary
 import cloudinary.uploader
+from datetime import datetime, timedelta
+from sqlalchemy import and_
 
 app = Flask(__name__)
 
@@ -296,7 +298,7 @@ def postShoppingCart(id):
         product_old = Product.query.filter_by(id=product['id']).first()
         print(product_old)
         if product_old is not None:
-            product_old.quantity_out = int(product_old.quantity_out) + int(product["quantity_out"])
+            product_old.quantity_out = int(product_old.quantity_out) + intgit(product["quantity_out"])
             print(product["quantity_out"])
             db.session.commit()
         stock_old = Inventory.query.filter_by(product_id=product['id']).first()
@@ -325,7 +327,41 @@ def getProductsByOrder(id):
 @app.route('/summary_business/<id>', methods=['GET'])
 # supplier id
 def getSummaryBusinessData(id):
+    productlist = Product.query.filter_by(supplier_id=id).all()
+    # id_list = list(map(lambda item: item["id"], productlist))
+    # inventorylist =  db.session.query(Inventory).filter(Inventory.product_id.in_(id_list)).all()
 
+    q_sales = 0
+    sum_price = 0
+    average_price = sum_price/len(productlist)
+    # income = q_sales * average_price
+    # stock = 0
+    for product in productlist:
+        if product is not None:
+            q_sales = q_sales + int(product.quantity_out)
+            sum_price = sum_price + int(product.price)
+        else:
+            q_sales = None
+    print(average_price)
+    # for inventory in inventorylist:
+    #     if inventory is not None:
+    #         stock = stock + int(inventory.total_supplier_stock)
+    #     else:
+    #         stock = None
+    
+    return jsonify({"q_sales": q_sales}, {"average_price": average_price},), 200
+
+    # return jsonify({q_sales}, {average_price}, {income}, {stock}), 200   
+
+    # print(productlist)
+    # thirty_days_ago = datetime.today() - timedelta(days = 30)
+    # print(thirty_days_ago)
+    # productlist_thirty_days_ago = productlist.filter_by(date >= thirty_days_ago).all()
+    # print(productlist_thirty_days_ago)
+    # q_sales_month = 0
+    # for product in productlist_thirty_days_ago
+    #     q_sales_month += int(product.quantity_out)
+    #     return jsonify({"exitoso": q_sales_month.serialize()}), 200
     # supplier_product_list = Product.query.filter_by(supplier_id=id)
     # # products = list(map(lambda item: item.serialize(), supplier_product_list))
 

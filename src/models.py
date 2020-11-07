@@ -109,6 +109,7 @@ class Product(db.Model):
             "quantity_out": self.quantity_out,
             "price": self.price,
             "img": self.img,
+            "date": self.date,
             "suppplier_id": self.supplier_id
         }
 
